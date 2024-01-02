@@ -1,4 +1,4 @@
-CFLAGS=-Werror -Wall
+CFLAGS=-g -Werror -Wall
 
 all: HelloWorld.exe
 
