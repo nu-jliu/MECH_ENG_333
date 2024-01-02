@@ -1,4 +1,4 @@
 [submodule "Assignments/Winter_Break/ME333-Winter-Break-Assignment"]
-	path = Assignments/Weinter_Break/ME333-Winter-Break-Assignment
+	path = Assignments/Winter_Break/ME333-Winter-Break-Assignment
 	url = git@github.com:nu-jliu/ME333-Winter-Break-Assignment.git
     branch = main
