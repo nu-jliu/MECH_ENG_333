@@ -15,7 +15,7 @@
  *
  * @param argc number of the arguments
  * @param argv the value of the arguments
- * @return int error code.
+ * @return int the error code.
  */
 int main(int argc, char **argv)
 {
