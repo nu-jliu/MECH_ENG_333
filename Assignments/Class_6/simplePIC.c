@@ -3,6 +3,7 @@
 void delay(void);
 
 int main(void) {
+//   int cycles = MAX_CYCLES;
   TRISBCLR = 0x30; // Make TRIS for B4 and B5 0, 
   LATBbits.LATB4 = 0;    // Turn GREEN on and YELLOW off.  These pins sink current
   LATBbits.LATB5 = 0;    // on the NU32DIP, so "high" (1) = "off" and "low" (0) = "on"
@@ -14,9 +15,9 @@ int main(void) {
   return 0;
 }
 
-void delay(void) {
+void delay(int cycles) {
   int j;
-  for (j = 0; j < 1000000; j++) { // number is 1 million
+  for (j = 0; j < cycles; j++) { // number is 1 million
     while(!PORTAbits.RA4) {
         ;   // Pin A4 is the USER switch, low (FALSE) if pressed.
     }

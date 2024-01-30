@@ -1,9 +1,8 @@
 XC32PATH=/opt/microchip/xc32/v4.35/bin
 HARMONYPATH=
-NU32PATH=/home/jliu/Course_Materials/MECH_ENG_333/Assignments/Class_6/utils
+NU32PATH=/home/jliu/Course_Materials/MECH_ENG_333/Assignments/Class_8/utils
 PORT=/dev/ttyUSB0
 TERMEMU=screen
-
 #This file is used to:
 #	1. compile .c files into .o files
 #	2. link the .o files into a .elf binary

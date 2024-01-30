@@ -4,3 +4,5 @@
 *.dis
 *.map
 *.elf
+
+**/.vscode/**
