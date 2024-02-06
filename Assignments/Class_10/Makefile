@@ -1,6 +1,6 @@
 XC32PATH=/opt/microchip/xc32/v4.35/bin
 HARMONYPATH=
-NU32PATH=/home/jliu/Course_Materials/MECH_ENG_333/Assignments/Class_10/utils
+NU32PATH=/home/jliu/Course_Materials/MECH_ENG_333/Assignments/Class_8/utils
 PORT=/dev/ttyUSB0
 TERMEMU=putty
 #This file is used to:
@@ -76,7 +76,7 @@ endif
 OBJS := $(patsubst %.c, %.o,$(wildcard *.c))
 HDRS := $(wildcard *.h)
 PROC = 32MX170F256B
-CFLAGS=-g -O1 -x c
+CFLAGS=-g -O0 -x c
 
 #if on windows use a different RM
 ifdef ComSpec

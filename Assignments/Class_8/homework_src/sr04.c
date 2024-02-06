@@ -25,21 +25,18 @@ unsigned int SR04_read_raw(unsigned int timeout)
     TRIG = 1;
     // wait at least 10us
     int time = _CP0_GET_COUNT();
-    while (_CP0_GET_COUNT() - time < 30)
-    {
-    }
+    while (_CP0_GET_COUNT() - time < 240)
+        ;
     // turn off TRIG
     TRIG = 0;
     // wait until ECHO is on
     while (ECHO == 0)
-    {
-    }
+        ;
     // note the value of the core timer
     unsigned int time_start = _CP0_GET_COUNT();
     // wait until ECHO is off or timeout core ticks has passed
     while (ECHO == 1 && (_CP0_GET_COUNT() - time_start) < timeout)
-    {
-    }
+        ;
     // note the core timer
     unsigned int time_end = _CP0_GET_COUNT();
     // return the difference in core times

@@ -28,7 +28,7 @@ int main(void)
         float distance = SR04_read_meters();
         // float distance = 0.5;
         memset(buff, '\0', BUFF_SIZE * sizeof(char));
-        sprintf(buff, "SR04 value in meters: %f\r\n", distance);
+        sprintf(buff, "HC-SR04 value in meters: %f\r\n", distance);
         NU32DIP_WriteUART1(buff);
 
         NU32DIP_GREEN = !NU32DIP_GREEN;
