@@ -76,7 +76,7 @@ endif
 OBJS := $(patsubst %.c, %.o,$(wildcard *.c))
 HDRS := $(wildcard *.h)
 PROC = 32MX170F256B
-CFLAGS=-g -O0 -x c
+CFLAGS=-g -O1 -x c
 
 #if on windows use a different RM
 ifdef ComSpec

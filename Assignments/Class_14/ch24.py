@@ -4,6 +4,7 @@
 # requires matplotlib
 
 import serial
+import sys
 
 # your com port name
 ser = serial.Serial("/dev/ttyUSB0", 230400)
@@ -11,7 +12,7 @@ print("Opening port: ")
 print(ser.name)
 
 # send 2 gains
-ser.write(b"0 .1\n")  # Kp Ki
+ser.write(b"0.1 0.01\n")  # Kp Ki
 
 # read the data back as int in reverse order
 sampnum = 0
@@ -35,10 +36,14 @@ while read_samples > 1:
 import matplotlib.pyplot as plt
 
 t = range(len(ADCval))  # time array
-plt.plot(t, ADCval, "r*-", t, ref, "b*-")
+plt.plot(t, ADCval, "r*-", label="ADC Value")
+plt.plot(t, ref, "b*-", label="Reference Value")
 plt.ylabel("value")
 plt.xlabel("sample")
+# plt.legend("ADC Value", "Reference Value")
+plt.legend()
 plt.show()
+# plt.savefig("hw_src/24_7.png")
 
 # be sure to close the port
 ser.close()
