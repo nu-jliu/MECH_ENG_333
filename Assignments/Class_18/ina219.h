@@ -1,10 +1,10 @@
 #ifndef INA219__H__
 #define INA219__H__
 
-#include <xc.h> // processor SFR definitions
+#include <xc.h>          // processor SFR definitions
 #include <sys/attribs.h> // __ISR macro
 
-#include "NU32DIP.h"
+#include "nu32dip.h"
 #include "i2c_master_noint.h"
 
 void INA219_Startup();

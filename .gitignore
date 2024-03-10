@@ -8,3 +8,4 @@
 **/.vscode/**
 **/nu32utility
 **/.venv/**
+**/__pycache__/** */
