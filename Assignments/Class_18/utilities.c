@@ -3,26 +3,22 @@
 
 #include "nu32dip.h"
 #include "utilities.h"
+#include "encoder.h"
 
 #define BUFF_SIZE 256
+#define ENCODER_COUNTS_PER_REV 17376
 
 volatile enum mode_t mode;
 
 volatile int ref_curr;
+volatile int pos_ref;
 
 volatile unsigned int speed;
 volatile int pwm_curr;
 volatile bool direction;
 volatile int count;
 volatile int total_err;
-
-volatile float kp_curr;
-volatile float ki_curr;
-volatile float kd_curr;
-
-volatile float kp_pos;
-volatile float ki_pos;
-volatile float kd_pos;
+volatile int prev_err;
 
 void printf_serial(const char *format, ...)
 {
@@ -84,4 +80,26 @@ void set_motor_speed(int pwm)
         // memset(buffer, '\0', sizeof(char) * BUFF_SIZE);
         // sprintf(buffer, "PWM has been set to %d%% in the counterclockwise direction.", pwm);
     }
+}
+
+int read_encoder_count()
+{
+    WriteUART2("a");
+    while (!get_encoder_flag())
+    {
+        ;
+    }
+    set_encoder_flag(0);
+
+    return get_encoder_count();
+}
+
+float count2deg(int count)
+{
+    return (float)count / (float)ENCODER_COUNTS_PER_REV * 360.0;
+}
+
+int deg2count(float degree)
+{
+    return (int)(degree * ENCODER_COUNTS_PER_REV / 360);
 }

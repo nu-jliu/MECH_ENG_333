@@ -8,73 +8,14 @@
 #include "i2c_master_noint.h"
 #include "ina219.h"
 #include "utilities.h"
+#include "current.h"
+#include "position.h"
 
-#define BUFF_SIZE 256                // Bytes
-#define PWM_FREQ 20000               // Hz
-#define CURRENT_CONTROL_FREQ 5000    // Hz
-#define POSITION_CONTROL_FREQ 200000 // Hz
-
-void __ISR(_TIMER_3_VECTOR, IPL4SOFT) Current_Controller(void)
-{
-    // LATBbits.LATB14 = !LATBbits.LATB14;
-    // // OC1RS = (unsigned int)((PR2 + 1) / 4);
-
-    float curr;
-    float error;
-    float control_pwm;
-    switch (mode)
-    {
-    case IDLE:
-        OC1RS = 0;
-        break;
-
-    case PWM:
-        LATBbits.LATB14 = direction;
-        OC1RS = (unsigned int)((float)(PR3 + 1) * speed / 100);
-        break;
-
-    case ITEST:
-        switch (++count)
-        {
-        case 100:
-            mode = IDLE;
-            break;
-
-        case 25:
-        case 50:
-        case 75:
-            ref_curr = -ref_curr;
-
-        default:
-            curr = INA219_read_current();
-            error = ref_curr - curr;
-            total_err += error;
-            control_pwm = kp_curr * error + ki_curr * total_err;
-
-            pwm_curr += control_pwm;
-
-            if (pwm_curr >= 100)
-            {
-                pwm_curr = 100;
-            }
-            else if (pwm_curr <= -100)
-            {
-                pwm_curr = -100;
-            }
-
-            set_motor_speed(pwm_curr);
-            LATBbits.LATB14 = direction;
-            OC1RS = (unsigned int)((float)(PR3 + 1) * speed / 100);
-            break;
-        }
-        break;
-
-    default:
-        break;
-    }
-
-    IFS0bits.T3IF = 0;
-}
+#define BUFF_SIZE 256             // Bytes
+#define PWM_FREQ 20000            // Hz
+#define CURRENT_CONTROL_FREQ 5000 // Hz
+#define POSITION_CONTROL_FREQ 200 // Hz
+#define MAX_POINTS 100
 
 int main(int argc, char **argv)
 {
@@ -91,7 +32,7 @@ int main(int argc, char **argv)
     INA219_Startup();
 
     NU32DIP_YELLOW = 1;
-    // NU32DIP_GREEN = 1;
+    NU32DIP_GREEN = 0;
 
     TRISBbits.TRISB14 = 0;
     LATBbits.LATB14 = 0;
@@ -113,16 +54,28 @@ int main(int argc, char **argv)
     OC1CONbits.ON = 1;                     // Enable OC1
 
     // Setup Current Controller
-    PR3 = NU32DIP_SYS_FREQ / CURRENT_CONTROL_FREQ - 1;
-    TMR3 = 0;
-    T3CONbits.TCKPS = 0b000;
-    T3CONbits.TGATE = 0;
-    T3CONbits.TCS = 0;
-    T3CONbits.ON = 1;
-    IPC3bits.T3IP = 4;
-    IPC3bits.T3IS = 0;
-    IFS0bits.T3IF = 0;
-    IEC0bits.T3IE = 1;
+    PR3 = NU32DIP_SYS_FREQ / 4 / CURRENT_CONTROL_FREQ - 1; // Set frequency of 5kHz
+    TMR3 = 0;                                              // Initialize Timer 3
+    T3CONbits.TCKPS = 0b010;                               // Set prescaler of Timer 3 as 1:4
+    T3CONbits.TGATE = 0;                                   // Disable gated accumulation
+    T3CONbits.TCS = 0;                                     // Internal peripheral clock
+    T3CONbits.ON = 1;                                      // Enable Timer 3
+    IPC3bits.T3IP = 4;                                     // Priority as 4
+    IPC3bits.T3IS = 0;                                     // Sub-priority of 0
+    IFS0bits.T3IF = 0;                                     // Clear Timer 4 interrupt flag
+    IEC0bits.T3IE = 1;                                     // Enable Timer 4 interrupt
+
+    // Setup current controller
+    PR4 = NU32DIP_SYS_FREQ / POSITION_CONTROL_FREQ - 1; // Set frequenct of 200kHz
+    TMR4 = 0;                                           // Initialize Timer 4
+    T4CONbits.TCKPS = 0b000;                            // Set prescaler of Timer 4 as 1
+    T4CONbits.TGATE = 0;                                // Disable the gated accumulation
+    T4CONbits.TCS = 0;                                  // Internal peripheral clock
+    T4CONbits.ON = 1;                                   // Enable Timer 4
+    IPC4bits.T4IP = 5;                                  // Iterrupt priority of 5
+    IPC4bits.T4IS = 0;                                  // Sub-priority of 0
+    IFS0bits.T4IF = 0;                                  // Interrupt flag of 0
+    IEC0bits.T4IE = 1;                                  // Enable interrupt
 
     __builtin_enable_interrupts();
 
@@ -135,12 +88,12 @@ int main(int argc, char **argv)
         memset(buffer, '\0', sizeof(char) * BUFF_SIZE);
         NU32DIP_ReadUART1(buffer, BUFF_SIZE);
         NU32DIP_YELLOW = 1;
-        float current;
+        int pos;
 
         switch (buffer[0])
         {
-        case 'b':
-            current = INA219_read_current();
+        case 'b':;
+            float current = INA219_read_current();
             // memset(buffer, '\0', sizeof(char) * BUFF_SIZE);
             // sprintf(buffer, "\r\nThe motor current is %f mA.\r\n", current);
             // NU32DIP_WriteUART1(buffer);
@@ -148,80 +101,41 @@ int main(int argc, char **argv)
             break;
 
         case 'c':
-            WriteUART2("a");
-            while (!get_encoder_flag())
-            {
-                ;
-            }
-            set_encoder_flag(0);
+            pos = read_encoder_count();
 
-            int p = get_encoder_count();
-
-            // memset(buffer, '\0', 50);
-            // sprintf(buffer, "\r\nThe motor angle is %d counts.\r\n", p);
-            // NU32DIP_WriteUART1(buffer);
-            printf_serial("%d\r\n", p);
+            printf_serial("%d\r\n", pos);
             break;
 
         case 'd':
-            WriteUART2("a");
-            while (!get_encoder_flag())
-            {
-                ;
-            }
-            set_encoder_flag(0);
+            pos = read_encoder_count();
+            float deg = count2deg(pos);
 
-            int pos = get_encoder_count();
-            float deg = (float)pos / 17367 * 360;
-
-            // memset(buffer, '\0', 50);
-            // sprintf(buffer, "\r\nThe motor angle is %f deg.\r\n", deg);
-            // NU32DIP_WriteUART1(buffer);
             printf_serial("%f\r\n", deg);
             break;
 
         case 'e':
+            WriteUART2("b");
             break;
 
         case 'f':
-            // memset(buffer, '\0', sizeof(char) * BUFF_SIZE);
-            // sprintf(buffer, "\r\nWhat PWM value would you like [-100, 100]? ");
-            // NU32DIP_WriteUART1(buffer);
             memset(buffer, '\0', sizeof(char) * BUFF_SIZE);
             NU32DIP_ReadUART1(buffer, sizeof(char) * BUFF_SIZE);
             int pwm;
             sscanf(buffer, "%d", &pwm);
             set_motor_speed(pwm);
-            // if (speed >= 0)
-            // {
-            //     // direction = false;
-            //     memset(buffer, '\0', sizeof(char) * BUFF_SIZE);
-            //     sprintf(buffer, "\r\nPWM has been set to %d%% in the clockwise direction.\r\n", pwm);
-            // }
-            // else
-            // {
-            //     // direction = true;
-            //     // speed = -speed;
-            //     memset(buffer, '\0', sizeof(char) * BUFF_SIZE);
-            //     sprintf(buffer, "\r\nPWM has been set to %d%% in the counterclockwise direction.\r\n", speed);
-            // }
             printf_serial("%d\r\n", pwm_curr);
-            // NU32DIP_WriteUART1(buffer);
+
+            __builtin_disable_interrupts();
+
             mode = PWM;
+
+            __builtin_enable_interrupts();
             break;
 
         case 'g':
-            // memset(buffer, '\0', sizeof(char) * BUFF_SIZE);
-            // sprintf(buffer, "\r\nEnter your desired Kp gain [recommended: 4.76]: ");
-            // NU32DIP_WriteUART1(buffer);
-
             memset(buffer, '\0', sizeof(char) * BUFF_SIZE);
             NU32DIP_ReadUART1(buffer, sizeof(char) * BUFF_SIZE);
             sscanf(buffer, "%f", &kp);
-
-            // memset(buffer, '\0', sizeof(char) * BUFF_SIZE);
-            // sprintf(buffer, "\r\nEnter your desired Ki gain [recommended: 0.32]: ");
-            // NU32DIP_WriteUART1(buffer);
 
             memset(buffer, '\0', sizeof(char) * BUFF_SIZE);
             NU32DIP_ReadUART1(buffer, sizeof(char) * BUFF_SIZE);
@@ -236,9 +150,6 @@ int main(int argc, char **argv)
             break;
 
         case 'h':
-            // memset(buffer, '\0', sizeof(char) * BUFF_SIZE);
-            // sprintf(buffer, "\r\nThe current controller is using Kp = %f, Ki = %f\r\n", kp_curr, ki_curr);
-            // NU32DIP_WriteUART1(buffer);
             printf_serial("%f\r\n", kp_curr);
             printf_serial("%f\r\n", ki_curr);
             break;
@@ -272,55 +183,81 @@ int main(int argc, char **argv)
             break;
 
         case 'k':
+            printf_serial("%d\r\n", MAX_POINTS - 1);
+
+            __builtin_disable_interrupts();
+
+            total_err = 0;
             mode = ITEST;
+
+            __builtin_disable_interrupts();
             break;
 
-        case 'q':
-            // memset(buffer, '\0', sizeof(char) * BUFF_SIZE);
-            // sprintf(buffer, "\r\nExit Program ...\r\n");
-            // NU32DIP_WriteUART1(buffer);
-            return EXIT_SUCCESS;
+        case 'l':
+            memset(buffer, '\0', sizeof(char) * BUFF_SIZE);
+            NU32DIP_ReadUART1(buffer, sizeof(char) * BUFF_SIZE);
+
+            float desired_deg;
+            int desired_count;
+            sscanf(buffer, "%f", &desired_deg);
+
+            desired_count = deg2count(desired_deg);
+
+            __builtin_disable_interrupts();
+
+            pos_ref = desired_count;
+            mode = HOLD;
+
+            __builtin_enable_interrupts();
             break;
 
         case 'p':
+            __builtin_disable_interrupts();
+
             mode = IDLE;
+
+            __builtin_enable_interrupts();
+            break;
+
+        case 'q':
+            NU32DIP_GREEN = 1;
+            __builtin_disable_interrupts();
+            return EXIT_SUCCESS;
             break;
 
         case 'r':
             switch (mode)
             {
             case IDLE:
-                memset(buffer, '\0', sizeof(char) * BUFF_SIZE);
-                sprintf(mode_str, "IDLE");
+                printf_serial("IDLE\r\n");
                 break;
 
             case PWM:
-                memset(buffer, '\0', sizeof(char) * BUFF_SIZE);
-                sprintf(mode_str, "PWM");
+                printf_serial("PWM\r\n");
                 break;
 
             case ITEST:
-                memset(buffer, '\0', sizeof(char) * BUFF_SIZE);
-                sprintf(mode_str, "ITEST");
+                printf_serial("ITEST\r\n");
+                break;
+
+            case HOLD:
+                printf_serial("HOLD\r\n");
+                break;
+
+            case TRACK:
+                printf_serial("TRACK\r\n");
                 break;
 
             default:
                 break;
             }
 
-            memset(buffer, '\0', sizeof(char) * BUFF_SIZE);
-            sprintf(buffer, "\r\nThe PIC32 controller is currently %s\r\n", mode_str);
-            NU32DIP_WriteUART1(buffer);
             break;
 
         default:
             NU32DIP_YELLOW = 0;
             break;
         }
-
-        // memset(buffer, '\0', sizeof(char) * BUFF_SIZE);
-        // sprintf(buffer, "\r\n");
-        // NU32DIP_WriteUART1(buffer);
     }
 
     return EXIT_SUCCESS;
