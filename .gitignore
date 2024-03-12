@@ -4,6 +4,7 @@
 *.dis
 *.map
 *.elf
+*.00
 
 **/.vscode/**
 **/nu32utility
