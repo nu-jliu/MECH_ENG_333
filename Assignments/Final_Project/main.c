@@ -82,10 +82,6 @@ int main(int argc, char **argv)
 
     while (true)
     {
-        // print_welcome_letter();
-        // memset(buffer, '\0', sizeof(char) * BUFF_SIZE);
-        // sprintf(buffer, "ENTER COMMAND: ");
-        // NU32DIP_WriteUART1(buffer);
         memset(buffer, '\0', sizeof(char) * BUFF_SIZE);
         NU32DIP_ReadUART1(buffer, BUFF_SIZE);
         NU32DIP_YELLOW = 1;
@@ -95,9 +91,6 @@ int main(int argc, char **argv)
         {
         case 'b':;
             float current = INA219_read_current();
-            // memset(buffer, '\0', sizeof(char) * BUFF_SIZE);
-            // sprintf(buffer, "\r\nThe motor current is %f mA.\r\n", current);
-            // NU32DIP_WriteUART1(buffer);
             printf_serial("%f\r\n");
             break;
 
@@ -219,8 +212,6 @@ int main(int argc, char **argv)
             NU32DIP_ReadUART1(buffer, BUFF_SIZE);
             sscanf(buffer, "%d", &num_data);
 
-            // printf_serial("got number of data: %d\r\n", num_data);
-
             __builtin_disable_interrupts();
 
             mode = IDLE;
@@ -229,22 +220,16 @@ int main(int argc, char **argv)
 
             __builtin_enable_interrupts();
 
-            // free(traj);
-            // traj = malloc(num_data * sizeof(int));
             for (int i = 0; i < num_data; ++i)
             {
-                // printf_serial("Loop %d", i + 1);
                 float traj_data;
                 memset(buffer, '\0', sizeof(char) * BUFF_SIZE);
                 NU32DIP_ReadUART1(buffer, BUFF_SIZE);
                 sscanf(buffer, "%f", &traj_data);
 
-                // printf_serial("Got data %f\r\n", traj_data);
                 traj[i] = traj_data;
-                // printf_serial("Stored data %f\r\n", traj_data);
             }
 
-            // printf_serial("Got all data\r\n");
             break;
 
         case 'o':
